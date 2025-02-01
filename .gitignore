@@ -42,3 +42,4 @@ dist/
 # Python egg and package metadata
 *.egg
 *.egg-info/
+chatGptresponse.py
