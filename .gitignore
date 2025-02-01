@@ -1,0 +1,44 @@
+# Python
+*.pyc
+*.pyo
+__pycache__/
+env/
+venv/
+.env
+*.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+
+# macOS system files
+.DS_Store
+
+# Environment files
+.env
+*.env
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# .env files or other sensitive information
+.env
+
+# Twilio specific (if using Python SDK)
+twilio_credentials.json
+
+# Ignore build directories
+build/
+dist/
+
+# Ignore virtual environment directories
+.env/
+.venv/
+
+# Python egg and package metadata
+*.egg
+*.egg-info/
