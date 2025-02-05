@@ -3,6 +3,9 @@ from mysql.connector import Error
 from tabulate import tabulate
 from myfunction import get_user_department_choice
 from logging_config import error_logger  # Import error logger
+from dotenv import load_dotenv
+import os
+
 
 class DatabaseHandler:
     def __init__(self, host="localhost", database="ja_db", user="root", password="2044"):
