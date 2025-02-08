@@ -3,14 +3,14 @@ import datetime
 from whatsupApi import send_whatsapp_interactive_message
 from rapidfuzz import process, fuzz
 from database_connect_api import DatabaseHandler
-# from myfunction import normalize_phone
+from myfunction import get_user_location
 from dotenv import load_dotenv
 import random
 import os
 from twilio.rest import Client
 import sys
 sys.path.append("C:/Class/Python/AI/orders/")  # Adjust to your actual path
-from logging_config import error_logger, orders_logger
+from logging_config import error_logger, orders_logger,chat_logger
 
 # Load environment variables
 load_dotenv()
@@ -27,12 +27,13 @@ class ProcessMessages:
             "update_orders": ["approve", "update", "approve orders"],
             "joke": ["tell me a joke", "make me laugh", "funny", "joke"],
             "fetch_news": ["latest news", "news update", "what's happening", "current events"],
-            "fetch_market": ["stock market", "market update", "latest stocks", "financial news"]
+            "fetch_market": ["stock market", "market update", "latest stocks", "financial news"],
+            "fetch_location": ["where am i", "my location", "get location", "fetch location"]
         }
         self.sid = os.getenv("TWILIO_SID")
         self.auth_token = os.getenv("TWILIO_AUTH_TOKEN")
         self.twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
-        self.my_whatsapp = "+254782793348"      # Your WhatsApp number
+             # Your WhatsApp number
         self.news_key=os.getenv("API_KEY1")
 
         self.db_handler = DatabaseHandler()
@@ -41,9 +42,6 @@ class ProcessMessages:
         self.user_dep = None
         self.user_phone = None
         self.user_desig = None
-
-def send_interactive_message(self, message_text):
-    send_whatsapp_interactive_message(self, message_text)
     
     def process_user_input(self, user_input, sender_phone):
         """Process user input and determine the response."""
@@ -56,7 +54,8 @@ def send_interactive_message(self, message_text):
         responses = []
         greeting_response = ""  # Initialize an empty string for greeting
         goodbye_triggered = False  # Flag to track if goodbye has been triggered
-        
+
+        chat_logger.info(f"{self.user_name} ({self.user_phone}): {user_input}")        
         for command in commands:
             intents = self.get_intent(command)
             
@@ -81,6 +80,7 @@ def send_interactive_message(self, message_text):
         if not goodbye_triggered:
             return "\n".join(responses)
         else:
+            chat_logger.info(f"BOT: {response_text}")
             return "\n".join(responses)
 
 
@@ -117,6 +117,7 @@ def send_interactive_message(self, message_text):
             "joke": self.tell_joke,
             "fetch_news": self.fetch_latest_news,
             "fetch_market": self.fetch_market_activity,
+            "fetch_location": self.fetch_user_location,  # 
             "unknown": self.unknown_intent
         }
         responses = [intent_to_function.get(intent, self.unknown_intent)() for intent in intents]
@@ -132,6 +133,19 @@ def send_interactive_message(self, message_text):
             "Good day! What can I help you with? 😊"
         ]
         return random.choice(greetings)
+
+    def fetch_user_location(self):
+        """Fetch and return the user's location with latitude and longitude."""
+        location_data = get_user_location()
+        
+        if "error" in location_data:
+            return location_data["error"]
+
+        lat = location_data["latitude"]
+        lon = location_data["longitude"]
+
+        return (f"📍 You are in {location_data['city']}, {location_data['region']}, {location_data['country']}.\n"
+                f"Coordinates: {lat}° N, {lon}° E 🌍")
 
     def say_goodbye(self):
         return f"Goodbye {self.user_name}! Take care and have an amazing day! 👋"
@@ -186,24 +200,21 @@ def send_interactive_message(self, message_text):
         return self.db_handler.update_hd_orders(department_option)
 
     def tell_joke(self):
+        """Fetch and return a random dad joke from an API."""
         joke_url = "https://icanhazdadjoke.com/"
-        headers = {
-            "Accept": "application/json"
-        }
-        
+        headers = {"Accept": "application/json"}
+
         try:
             response = requests.get(joke_url, headers=headers)
             data = response.json()
 
             if response.status_code == 200:
-                joke = f"{data['joke']} 😄"
-                # Send interactive WhatsApp message after fetching the joke
-                self.send_interactive_message(joke)
-                return joke
+                return f"{data['joke']} 😄"
             else:
                 return "Sorry, I couldn't fetch a dad joke at the moment. Try again later! 🤔"
         except Exception as e:
             return f"Error fetching joke: {str(e)}"
+
 
     def fetch_latest_news(self):
         url = "https://newsapi.org/v2/top-headlines"
@@ -257,83 +268,6 @@ def send_interactive_message(self, message_text):
         except Exception as e:
             error_logger.error(f"Error in get_employee_details: {e}")
             return None
-
-def get_user_department_choice(dbConn):
-    """
-    Display a menu for the user to choose a department, sourced from the database,
-    and return their choice (department name or "ALL DEPARTMENTS").
-    The user can input either the department name or its numeric position.
-    """
-    if not dbConn:
-        print("Database connection failed. Please check your connection settings.")
-        return None
-
-    try:
-        # Fetch all department names from the database
-        cursor = dbConn.cursor()
-        cursor.execute("SELECT distinct(department) FROM orders_departments")
-        departments = cursor.fetchall()
-
-        if not departments:
-            print("No departments found in the database.")
-            return None
-
-        # Create a mapping of the department names to the indices
-        department_mapping = {idx + 1: dept[0] for idx, dept in enumerate(departments)}  # dept[0] gives the department name
-
-        # Format and display the department options in five columns
-        print("Select a department to fetch approved orders:")
-        department_items = list(department_mapping.items())
-        column_width = max(len(dept[0]) for dept in departments) + 3  # Adjust spacing for alignment
-        num_columns = 5  # Number of columns
-        num_rows = (len(department_items) + num_columns - 1) // num_columns  # Calculate rows needed
-
-        # Print the department options in rows and columns
-        for row in range(num_rows):
-            row_output = []
-            for col in range(num_columns):
-                index = row + col * num_rows
-                if index < len(department_items):
-                    item_num, dept_name = department_items[index]
-                    row_output.append(f"{item_num}. {dept_name:<{column_width}}")
-                else:
-                    row_output.append(" " * (column_width + 4))  # Empty space for alignment
-            print(" ".join(row_output))
-
-        # Add the option for "ALL DEPARTMENTS"
-        print(f"{len(department_mapping) + 1}. ALL DEPARTMENTS")
-
-        # Get user choice (either department name or numeric index)
-        user_input = input(f"Enter your choice (1-{len(department_mapping) + 1} or department name): ").strip()
-
-        # Check if the user input is a valid department name
-        if user_input.lower() == "all departments":
-            return "ALL DEPARTMENTS"
-
-        # Check if the input is a valid numeric choice
-        if user_input.isdigit():
-            choice = int(user_input)
-            if 1 <= choice <= len(department_mapping) + 1:
-                if choice == len(department_mapping) + 1:
-                    return "ALL DEPARTMENTS"
-                return department_mapping[choice]
-            else:
-                print("Invalid numeric choice. Please select a valid department.")
-                return None
-        else:
-            # Check if the input matches any department name
-            for dept_name in department_mapping.values():
-                if user_input.lower() == dept_name.lower():
-                    return dept_name
-            print("Invalid department name. Please enter a valid name or numeric choice.")
-            return None
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
-
-
 
 
 

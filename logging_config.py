@@ -13,3 +13,10 @@ order_handler = logging.FileHandler("orders.log")
 order_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 orders_logger.addHandler(order_handler)
 orders_logger.setLevel(logging.INFO)
+
+# Configure chat history logging
+chat_logger = logging.getLogger("chat_logger")
+chat_handler = logging.FileHandler("chat_history.log")  # This file stores chat history
+chat_handler.setFormatter(logging.Formatter("%(asctime)s - USER: %(message)s"))
+chat_logger.addHandler(chat_handler)
+chat_logger.setLevel(logging.INFO)
