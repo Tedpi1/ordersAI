@@ -33,7 +33,7 @@ class ProcessMessages:
         self.sid = os.getenv("TWILIO_SID")
         self.auth_token = os.getenv("TWILIO_AUTH_TOKEN")
         self.twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
-             # Your WhatsApp number
+        self.my_whatsapp = "+254782793348"      # Your WhatsApp number
         self.news_key=os.getenv("API_KEY1")
 
         self.db_handler = DatabaseHandler()
