@@ -43,3 +43,4 @@ dist/
 *.egg
 *.egg-info/
 chatGptresponse.py
+.qodo
